@@ -1,0 +1,21 @@
+{
+  "sheet_name": "JUNE/JULY/AUGUST 2026 MASTER COMP BUDGET",
+  "sheet_drive_id": "1Y3Eq5t9j38kXMDaRWFua7ZKrRuoVImB7GWdlCdU2fj8",
+  "slides_type_url": "https://claude.ai/artifact/8jTsAFQMFDb2oA8MsPJ2eL",
+  "drive_account": "benji@caddycomps.com",
+  "slack_channel": {
+    "name": "#performance-team",
+    "id": "C0C023ERG3D",
+    "type": "private",
+    "status": "confirmed by Benji as the daily report channel; still confirm before the first post"
+  },
+  "email": {
+    "status": "Gmail connected as benji@caddycomps.com",
+    "rule": "confirm recipients and wording before the first send; read only Triple Whale report emails"
+  },
+  "run_time": "09:45 UK time every morning, reporting on yesterday (the last full day of sales)",
+  "triple_whale": {
+    "status": "NOT USED for now. Moby cannot schedule on Benji's plan. The report does not need Triple Whale. A Triple Whale connector has been requested from the account admin; when it is connected, use it for a traffic and spend line.",
+    "do_not": "do not look for 'TW Daily' emails; none are being sent"
+  }
+}
