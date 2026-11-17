@@ -73,20 +73,37 @@ NUM=('dom','price','tickets','sold','total','revenue','pct','gap70')
 SPECIALS=(('BIG WEDGE','Big Wedge'),('HALLOWEEN','Halloween'))
 
 IGNORED=[]
+# The sheet has two layouts. Old week tabs: A category, B slot, C prize, D price, E tickets, H total, J sold, K %, L revenue,
+# blocks end at a TOTAL row. New layout (from Week 25, same as the Planning tabs): A Planned, B slot or day header, C category,
+# D prize, E price, F tickets, I total, K sold, L %, M revenue; blocks end at "Daily Comp Total". norm_row maps new rows onto old positions.
+def is_new_layout(first_row):
+    r=[(str(x).strip().upper() if x is not None else '') for x in list(first_row)[:5]]
+    return r[0]=='PLANNED' or (len(r)>3 and r[3]=='PRIZES')
+def norm_row(r, new):
+    r=list(r)+[None]*20
+    if not new: return r
+    out=[r[2],r[1],r[3],r[4],r[5],r[6],r[7],r[8],r[9],r[10],r[11],r[12]]+[None]*20
+    for x in r[:4]:                                   # day header sits in B (or C on later days)
+        if isinstance(x,str) and DAYRE.match(x.strip().upper()) and not x.strip().upper().startswith('WIN'): out[2]=x; break
+    if any(isinstance(x,str) and x.strip().upper()=='DAILY COMP TOTAL' for x in r[:6]): out[4]='TOTAL'
+    elif any(isinstance(x,str) and x.strip().upper() in ('LUNCHTIME TOTAL','EVENING TOTAL','INSTANT WIN TOTAL','SITE TOTAL') for x in r[:6]): out=[None]*32
+    return out
 def load(path,idx=0,special=None):
     del IGNORED[:]
     wb=load_workbook(path,data_only=True); ws=wb.worksheets[idx]; t=ws.title.upper()
     m=re.search(r'WEEK\s*(\d+)',t); week='W'+(m.group(1) if m else ws.title)
     if special is None: special=next((n for k,n in SPECIALS if k in t),'')
     rows=[]; day=date=''; tags=[]; draw='Live draw'
+    new=None
     for r in ws.iter_rows(values_only=True):
-        r=list(r)+[None]*20; c=r[2]
+        if new is None: new=is_new_layout(r)
+        r=norm_row(r,new); c=r[2]
         if any(isinstance(x,str) and x.strip().upper()=='TOTAL' for x in r[:6]): day=''; continue
         if not isinstance(c,str): continue
         u=c.strip().upper(); d=DAYRE.match(u)
         if d and not u.startswith('WIN'):
             day=d.group(1).title(); tags=[x.strip() for x in re.findall(r'\(([^)]*)\)',u)]
-            date=re.sub(r'\([^)]*\)','',d.group(2)).strip(); draw='Auto draw' if 'AD' in tags else 'Live draw'; continue
+            date=re.sub(r'\([^)]*\)','',d.group(2)).strip(' -'); draw='Auto draw' if 'AD' in tags else 'Live draw'; continue
         if u.startswith('WIN') and isinstance(r[4],(int,float)) and not day: IGNORED.append((c.strip(),r[9] or 0))
         if u.startswith('WIN') and isinstance(r[4],(int,float)) and day:
             price,tix=float(r[3] or 0),float(r[4]); h=float(r[7] or price*tix); sold=float(r[9] or 0)

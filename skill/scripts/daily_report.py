@@ -46,9 +46,10 @@ def load_plan(path,cw,days_done):
         if not m: continue
         wk=int(m.group(1)); planning='PLANNING' in t
         if wk<cwk or (planning and wk in real): continue   # a real week tab wins over its planning tab
-        pc=3 if planning else 2; day=None
+        pc=2; day=None; new=None
         for r in ws.iter_rows(values_only=True):
-            r=list(r)+[None]*20
+            if new is None: new=A.is_new_layout(r)
+            r=A.norm_row(r,new)
             if any(isinstance(x,str) and x.strip().upper()=='TOTAL' for x in r[:6]): day=None; continue
             for c in (pc-2,pc-1,pc):
                 if isinstance(r[c],str):
@@ -64,6 +65,7 @@ def load_plan(path,cw,days_done):
 def main():
     ap=argparse.ArgumentParser(); ap.add_argument('--workbook',required=True); ap.add_argument('--extra',nargs='*',default=[]); ap.add_argument('--day')
     ap.add_argument('--date',help='report on this date (YYYY-MM-DD), e.g. yesterday for a morning run; later days in the sheet are ignored'); ap.add_argument('--out',required=True)
+    ap.add_argument('--tw',help='optional JSON file of Triple Whale site figures: {"sales","orders","ad_spend","roas"} for the report day and the same day last week as "prev_*"')
     a=ap.parse_args(); K.ROOT=os.path.join(a.out,'project')+'/'; os.makedirs(K.ROOT+'slides',exist_ok=True)
     data=load_all([a.workbook]+a.extra); weeks=sorted(data,key=A.wkey); cw=weeks[-1]; comb=[r for w in weeks for r in data[w]]; A.build_wc(comb)
     cur=data[cw]; days_done=[d for d in DAYS if sum(r['sold'] for r in cur if r['day']==d)>0]; today=a.day or days_done[-1]
@@ -109,7 +111,17 @@ def main():
             else: p.append(T(620,y,'-',24,MUTED,'end')+T(W,y,'new',24,MUTED,'end'))
         return f'<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:{CARD};padding:24px 32px;border:1px solid {LINE};border-radius:16px"><h3 style="{SERIF};font-size:34px;font-weight:600;color:{DARK}">{ttl}</h3>{svg(W,H,label,"".join(p))}</div>'
     prow=cmp_rows(lambda r:r['ptype'],PL); brow=cmp_rows(lambda r:r['brand'],{})
-    sec('today',h2(title)+f'<div style="display:flex;gap:24px">{cards}</div><div style="display:flex;gap:32px">{cmp_panel("Products",prow,"Average percent sold today against the same day last week by product")}{cmp_panel("Brands",brow,"Average percent sold today against the same day last week by brand")}</div>',
+    twline=''
+    if a.tw:
+        try:
+            TWD=json.load(open(a.tw))
+            def ch(k): return f' ({(TWD[k]/TWD["prev_"+k]-1)*100:+.0f}%)' if TWD.get('prev_'+k) else ''
+            twline=(f'Site (Triple Whale): sales £{TWD["sales"]/1000:.1f}k{ch("sales")}, orders {int(TWD["orders"]):,}{ch("orders")}, '
+                    f'ad spend £{TWD["ad_spend"]/1000:.1f}k{ch("ad_spend")}, ROAS {TWD["roas"]:.1f}'+(f' (last {today} {TWD["prev_roas"]:.1f})' if TWD.get('prev_roas') else '')+'. Changes vs last '+today+'.')
+        except Exception as e:
+            print(f'TW_SKIPPED {e}',file=sys.stderr); twline=''
+    twhtml=f'<p style="font-size:24px;line-height:1.3;color:{MUTED}">{twline}</p>' if twline else ''
+    sec('today',h2(title)+f'<div style="display:flex;gap:24px">{cards}</div>{twhtml}<div style="display:flex;gap:32px">{cmp_panel("Products",prow,"Average percent sold today against the same day last week by product")}{cmp_panel("Brands",brow,"Average percent sold today against the same day last week by brand")}</div>',
         f'Same day last week = {today} {ldlab}. Average = mean of all earlier {today}s ({nuw} weeks). Products and brands ranked by £ gap to 70% today; brackets show comps. Change in percentage points. Made 70% excludes ticket feeders.',footer=f'Source: weekly comps sheet. {today} {dlab} against {today} {ldlab}. Change = percentage points.',pad='96px 128px 150px',gap=20)
     # ---- slide 3 trends
     daily=[]
@@ -348,7 +360,7 @@ def main():
     wl_=[('Overall',fmt(wm['ov']))]+([(f'Last week to {today}',fmt(wpm['ov']))] if wtd_prev else [])
     title=f'Daily Sales Review: {today} {dlab}'
     slack=f'**{title}**\n\n**Today**\n'+''.join(f'- {k}: **{v}**\n' if k=='Overall' else f'- {k}: {v}\n' for k,v in tl)+'\n**Week to date**\n'+''.join(f'- {k}: **{v}**\n' if k=='Overall' else f'- {k}: {v}\n' for k,v in wl_)+f'\n[Open the deck]({DECK_URL}) for alerts, fatigue, plan changes and new ideas.\n'
-    email=f'{title}\n\nTODAY\n'+''.join(f'- {k}: {v}\n' for k,v in tl)+'\nWEEK TO DATE\n'+''.join(f'- {k}: {v}\n' for k,v in wl_)+f'\nDECK (alerts, fatigue, plan changes and new ideas)\n{DECK_URL}\n'
+    email=f'{title}\n\nTODAY\n'+''.join(f'- {k}: {v}\n' for k,v in tl)+'\nWEEK TO DATE\n'+''.join(f'- {k}: {v}\n' for k,v in wl_)+(f'\nSITE (TRIPLE WHALE)\n- '+twline.replace('Site (Triple Whale): s','S')+'\n' if twline else '')+f'\nDECK (alerts, fatigue, plan changes and new ideas)\n{DECK_URL}\n'
     open(os.path.join(a.out,'slack.md'),'w').write(slack); open(os.path.join(a.out,'email.txt'),'w').write(email); open(os.path.join(a.out,'subject.txt'),'w').write(title)
     json.dump(dict(week=cw,today=today,date=dlab,today_ov=tm['ov'],last_ov=lm_['ov'] if L else None,usual_ov=um['ov'],wtd=wm['ov'],wtd_prev=wpm['ov'] if wtd_prev else None,flags=[(r['k'],r['flag']) for r in cp+cb],fatigue=[f for _,f,*_ in fat]),open(os.path.join(a.out,'daily.json'),'w'),indent=1)
     print(summary)
