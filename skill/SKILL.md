@@ -28,6 +28,11 @@ If neither works, say so and ask for the upload.
 
 Comp names: the same product is sometimes worded differently in the sheet (for example R7 QUAD 15.5° MINI DRIVER and R7 QUAD MINI DRIVER). The script merges loft, flex, hand size, brackets, stray #, trailing PUTTER, GOLF BALLS and GPS WATCH automatically. Colour, model and edition words (X, MAX, PRO, BLACK, CHROME, SHADOWFALL) are kept apart because they can be different products; when Benji confirms two names are the same product, add them to `references/aliases.json`.
 
+
+Sheet layouts: from Week 25 the week tabs use the new layout (same as the Planning tabs: A Planned, B slot or day header, D prize, E price, F tickets, I total, K sold, L %, M revenue, blocks end at "Daily Comp Total"). The scripts read both layouts.
+
+Triple Whale (optional): pass `--tw tw.json` with {sales, orders, ad_spend, roas, prev_*} for the report day and the same day last week (fetched with the Triple Whale connector's run-sql on orders_table and ads_table). It adds one line to the email and the Today slide; Slack is unchanged.
+
 ## The eight slides
 
 1. Title: "Daily Sales Review" with the day and date
