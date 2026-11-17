@@ -297,7 +297,7 @@ def main():
     for rk,o,nm_,why,c in prows:
         sw_=(f'<div style="display:flex;flex-direction:column;gap:4px"><p style="font-size:26px;font-weight:700;line-height:1.2">{c[0]}</p><p style="font-size:24px;line-height:1.25;color:{MUTED}">{c[1]}</p></div>' if c else '<p style="font-size:24px;color:#5E5E5A">No rested comp qualifies; review by hand.</p>')
         pb_+=f'<div style="display:grid;grid-template-columns:{GP};gap:16px;align-items:start;padding:10px 14px;border-bottom:1px solid {LINE}"><p style="font-size:26px;font-weight:700;line-height:1.2">{olab(o)}</p><p style="font-size:26px;font-weight:700;line-height:1.2">{nm_}</p><p style="font-size:24px;line-height:1.25">{why}</p>{sw_}</div>'
-    sec('plan',h2(f'Upcoming plan: suggested changes ({olab(LOCK+1)} to {olab(HORIZON)})' if prows else f'No plan changes suggested for {olab(LOCK+1)} to {olab(HORIZON)}')+(f'<div style="display:flex;flex-direction:column">{ph}{pb_}</div>' if prows else f'<p style="font-size:30px">Nothing planned in this window is fatiguing, averaging under 64%, from a weak brand or booked back to back. {len(plan)} planned comps checked.</p>'),
+    sec('plan',h2(f'Suggested plan changes, {odate(LOCK+1).day} {odate(LOCK+1):%b} to {odate(HORIZON).day} {odate(HORIZON):%b}' if prows else f'No plan changes suggested, {odate(LOCK+1).day} {odate(LOCK+1):%b} to {odate(HORIZON).day} {odate(HORIZON):%b}')+(f'<div style="display:flex;flex-direction:column">{ph}{pb_}</div>' if prows else f'<p style="font-size:30px">Nothing planned in this window is fatiguing, averaging under 64%, from a weak brand or booked back to back. {len(plan)} planned comps checked.</p>'),
         f'Checks every comp already in the plan (the rest of this week and the Week NN Planning tabs) that draws between {olab(LOCK+1)} and {olab(HORIZON)}. Comps must be on the website for 7 days, so anything drawing up to {olab(LOCK)} is already live and is not changed here. Reasons, most serious first: showing fatigue; averaging under 64% over 3+ runs in 8 weeks; brand averages under 70% across our history; booked within 2 days of its previous run. One row per comp, at its first draw in the window. Swaps use the replacement rules from the fatigue slide, with rest counted to that draw date and nothing already planned within 3 days of it. Suggestions from past results, not forecasts.',
         footer=f'{len(plan)} planned comps checked, {nflag} flagged, top {len(prows)} shown. Draws up to {olab(LOCK)} are already live (7 day minimum).',pad='96px 128px 150px',gap=20)
     # ---- slide 7 new comp ideas
@@ -307,7 +307,7 @@ def main():
         for it in IDEAS['ideas'][:6]:
             pats=[re.compile(r'\b'+k+r'\b') for k in it['keywords']]
             hit=[r for r in comb if any(p.search(r['family']) for p in pats)]; hnf=[r for r in hit if r['tier']!='Ticket Feeder']; hfd=len(hit)-len(hnf)
-            if not hit: ran='Never run in the '+str(nweeks)+' weeks of history'
+            if not hit: ran='Never run ('+str(nweeks)+' weeks of history)'
             else: ran=(f'Ran {len(hnf)} time{"s" if len(hnf)!=1 else ""}, {mean([r["pct"] for r in hnf])*100:.0f}% average' if hnf else 'Only feeder runs')+(f' (plus {hfd} feeder runs)' if hfd and hnf else '')
             relp=[re.compile(r'\b'+k+r'\b') for k in it.get('related',[])]
             rh=[r for r in NFall if relp and any(p.search(r['family']) for p in relp) and r not in hnf]
