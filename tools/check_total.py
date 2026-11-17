@@ -33,17 +33,22 @@ res['zero_sold'] = [r['prize'] for r in TD if r['sold'] == 0]
 res['report_date'] = TD[0]['date'] if TD else ''
 wsv, wsf = wbv.worksheets[idx], wbf.worksheets[idx]
 num = lambda x: float(x) if isinstance(x, (int, float)) else 0.0
-day = None; block = []; sheet_pct = None; bad_ranges = []; my_pct = None; n_block = 0
+day = None; block = []; sheet_pct = None; bad_ranges = []; my_pct = None; n_block = 0; new = None
+HC, LC = (9, 13) if False else (8, 12)          # sheet columns (1-based) of full value and revenue, old layout
 for row in wsv.iter_rows():
-    r = [c.value for c in row] + [None] * 20; rn = row[0].row
+    raw = [c.value for c in row]; rn = row[0].row
+    if new is None:
+        new = A.is_new_layout(raw)
+        if new: HC, LC = 9, 13                  # new layout: I = total, M = revenue
+    r = A.norm_row(raw, new)
     if isinstance(r[2], str):
         u = r[2].strip().upper(); m = A.DAYRE.match(u)
         if m and not u.startswith('WIN'): day = m.group(1).title(); block = []; continue
         if day and u.startswith('WIN') and isinstance(r[4], (int, float)): block.append(r)
     if any(isinstance(x, str) and x.strip().upper() == 'TOTAL' for x in r[:6]):
-        fh, fl = wsf.cell(rn, 8).value, wsf.cell(rn, 12).value
-        rh = re.search(r'\((H\d+):H(\d+)\)', str(fh)); rl = re.search(r'\((L\d+):L(\d+)\)', str(fl))
-        if rh and rl and (rh.group(1)[1:], rh.group(2)) != (rl.group(1)[1:], rl.group(2)):
+        fh, fl = wsf.cell(rn, HC).value, wsf.cell(rn, LC).value
+        rh = re.search(r'\(([A-Z])(\d+):[A-Z](\d+)\)', str(fh)); rl = re.search(r'\(([A-Z])(\d+):[A-Z](\d+)\)', str(fl))
+        if rh and rl and (rh.group(2), rh.group(3)) != (rl.group(2), rl.group(3)):
             bad_ranges.append(f'{day} row {rn}: {fl} vs {fh}')
         if day == today:
             if isinstance(r[10], (int, float)): sheet_pct = round(r[10] * 100, 2)
